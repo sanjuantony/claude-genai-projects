@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPA Calculator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ── Theme tokens ── */
+    :root {
+      --bg-gradient:      linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      --card-bg:          #ffffff;
+      --card-shadow:      rgba(0, 0, 0, 0.15);
+      --title-color:      #1a1a2e;
+      --muted-color:      #666666;
+      --counter-btn-bg:   #ffffff;
+      --divider-color:    #f0f0f5;
+      --col-label-color:  #999999;
+      --input-bg:         #fafafa;
+      --input-bg-focus:   #ffffff;
+      --input-border:     #e8e8f0;
+      --input-color:      #1a1a2e;
+      --input-error-bg:   #fff5f5;
+      --badge-default-bg: #f0f0f5;
+      --badge-default-cl: #999999;
+      --tooltip-color:    #999999;
+    }
+
+    html[data-theme="dark"] {
+      --bg-gradient:      linear-gradient(135deg, #0d0d1f 0%, #1a0f2e 50%, #2a1a40 100%);
+      --card-bg:          #1c1c2e;
+      --card-shadow:      rgba(0, 0, 0, 0.5);
+      --title-color:      #e0e0ff;
+      --muted-color:      #8888aa;
+      --counter-btn-bg:   #1c1c2e;
+      --divider-color:    #2a2a45;
+      --col-label-color:  #5555aa;
+      --input-bg:         #252538;
+      --input-bg-focus:   #2d2d48;
+      --input-border:     #3a3a58;
+      --input-color:      #e0e0ff;
+      --input-error-bg:   #3a1a1a;
+      --badge-default-bg: #252538;
+      --badge-default-cl: #6666aa;
+      --tooltip-color:    #5555aa;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      transition: background 0.4s ease;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      margin-top: 8px;
+      font-size: 1rem;
+      opacity: 0.85;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 20px 60px var(--card-shadow);
+      transition: background 0.3s, box-shadow 0.3s;
+      margin-bottom: 24px;
+    }
+
+    .step-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #764ba2;
+      margin-bottom: 8px;
+    }
+
+    .step-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--title-color);
+      margin-bottom: 20px;
+    }
+
+    .subject-count-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .counter-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid #764ba2;
+      background: var(--counter-btn-bg);
+      color: #764ba2;
+      font-size: 1.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .counter-btn:hover {
+      background: #764ba2;
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .counter-btn:active {
+      transform: scale(0.95);
+    }
+
+    .counter-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .count-display {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #764ba2;
+      min-width: 48px;
+      text-align: center;
+    }
+
+    .count-label {
+      font-size: 0.95rem;
+      color: var(--muted-color);
+    }
+
+    #subjects-section {
+      display: none;
+    }
+
+    .subjects-header {
+      display: grid;
+      grid-template-columns: 1fr 130px 80px;
+      gap: 12px;
+      padding: 0 0 8px;
+      border-bottom: 2px solid var(--divider-color);
+      margin-bottom: 12px;
+    }
+
+    .subjects-header span {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--col-label-color);
+    }
+
+    .subject-row {
+      display: grid;
+      grid-template-columns: 1fr 130px 80px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      animation: slideIn 0.3s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .subject-row input {
+      height: 44px;
+      border: 2px solid var(--input-border);
+      border-radius: 10px;
+      padding: 0 14px;
+      font-size: 0.95rem;
+      color: var(--input-color);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+      background: var(--input-bg);
+      width: 100%;
+    }
+
+    .subject-row input:focus {
+      border-color: #764ba2;
+      box-shadow: 0 0 0 3px rgba(118,75,162,0.12);
+      background: var(--input-bg-focus);
+    }
+
+    .subject-row input.error {
+      border-color: #ef4565;
+      background: var(--input-error-bg);
+    }
+
+    .subject-row input.valid {
+      border-color: #44cf6c;
+    }
+
+    .grade-badge {
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+      transition: all 0.3s;
+      background: var(--badge-default-bg);
+      color: var(--badge-default-cl);
+    }
+
+    .calc-btn {
+      width: 100%;
+      height: 52px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(118,75,162,0.35);
+      letter-spacing: 0.5px;
+    }
+
+    .calc-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(118,75,162,0.45);
+    }
+
+    .calc-btn:active {
+      transform: translateY(0);
+    }
+
+    #result-section {
+      display: none;
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 20px;
+      padding: 32px;
+      color: white;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(118,75,162,0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .result-card::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: -40px;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .gpa-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+
+    .gpa-value {
+      font-size: 5rem;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 8px;
+      text-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    .gpa-letter {
+      font-size: 1.3rem;
+      font-weight: 700;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .ring-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 24px 0;
+    }
+
+    .ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg   { fill: none; stroke: rgba(255,255,255,0.2); }
+    .ring-fill {
+      fill: none;
+      stroke: white;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);
+    }
+
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .breakdown-item {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .breakdown-name {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .breakdown-score {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .breakdown-grade {
+      font-size: 0.75rem;
+      opacity: 0.8;
+    }
+
+    .reset-btn {
+      width: 100%;
+      height: 46px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      background: transparent;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .reset-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .badge-Aplus  { background: #d4efdf; color: #27ae60; }
+    .badge-A      { background: #d5f5e3; color: #1e8449; }
+    .badge-Aminus { background: #d5f5e3; color: #239b56; }
+    .badge-Bplus  { background: #d6eaf8; color: #1a5276; }
+    .badge-B      { background: #d6eaf8; color: #2471a3; }
+    .badge-Bminus { background: #d6eaf8; color: #2980b9; }
+    .badge-Cplus  { background: #fef9e7; color: #d68910; }
+    .badge-C      { background: #fef9e7; color: #ca6f1e; }
+    .badge-Cminus { background: #fef9e7; color: #b7950b; }
+    .badge-Dplus  { background: #fdecea; color: #c0392b; }
+    .badge-D      { background: #fdecea; color: #a93226; }
+    .badge-F      { background: #fadbd8; color: #922b21; }
+
+    .tooltip {
+      font-size: 0.78rem;
+      color: var(--tooltip-color);
+      margin-top: 6px;
+    }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor: pointer;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.25s, transform 0.3s;
+      z-index: 1000;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.12) rotate(18deg);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.95);
+    }
+
+    @media (max-width: 500px) {
+      .subjects-header,
+      .subject-row { grid-template-columns: 1fr 100px 64px; }
+      .header h1   { font-size: 1.8rem; }
+      .gpa-value   { font-size: 3.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark / light mode">
+  <span id="theme-icon">🌙</span>
+</button>
+
+<div class="container">
+  <div class="header">
+    <h1>GPA Calculator</h1>
+    <p>Enter your subjects and marks to instantly calculate your GPA</p>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card" id="step1-card">
+    <div class="step-label">Step 1</div>
+    <div class="step-title">How many subjects are you taking?</div>
+    <div class="subject-count-row">
+      <button class="counter-btn" id="btn-minus" onclick="changeCount(-1)">−</button>
+      <div class="count-display" id="count-display">1</div>
+      <button class="counter-btn" id="btn-plus"  onclick="changeCount(1)">+</button>
+      <div class="count-label">subject(s)</div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card" id="subjects-section">
+    <div class="step-label">Step 2</div>
+    <div class="step-title">
+      Enter subject names &amp; marks
+      <span style="font-size:0.85rem;color:#999;font-weight:400">(marks out of 100)</span>
+    </div>
+    <div class="subjects-header">
+      <span>Subject</span>
+      <span>Mark / 100</span>
+      <span>Grade</span>
+    </div>
+    <div id="subjects-list"></div>
+    <p class="tooltip">Tip: Press Tab to move between fields quickly.</p>
+    <button class="calc-btn" onclick="calculate()">Calculate GPA</button>
+  </div>
+
+  <!-- Result -->
+  <div id="result-section">
+    <div class="result-card">
+      <div class="ring-wrap">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle class="ring-bg"   cx="70" cy="70" r="58" stroke-width="10"/>
+          <circle class="ring-fill" id="ring-fill" cx="70" cy="70" r="58"
+                  stroke-width="10"
+                  stroke-dasharray="364.4"
+                  stroke-dashoffset="364.4"/>
+        </svg>
+      </div>
+      <div class="gpa-label">Your GPA</div>
+      <div class="gpa-value" id="gpa-value">0.00</div>
+      <div class="gpa-letter" id="gpa-letter"></div>
+      <div class="breakdown-grid" id="breakdown-grid"></div>
+      <button class="reset-btn" onclick="reset()">&#8635; Start Over</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let subjectCount = 1;
+  const MIN = 1, MAX = 20;
+
+  function gradeInfo(mark) {
+    if (mark >= 97) return { letter: 'A+',  points: 4.0, key: 'Aplus'  };
+    if (mark >= 93) return { letter: 'A',   points: 4.0, key: 'A'      };
+    if (mark >= 90) return { letter: 'A−',  points: 3.7, key: 'Aminus' };
+    if (mark >= 87) return { letter: 'B+',  points: 3.3, key: 'Bplus'  };
+    if (mark >= 83) return { letter: 'B',   points: 3.0, key: 'B'      };
+    if (mark >= 80) return { letter: 'B−',  points: 2.7, key: 'Bminus' };
+    if (mark >= 77) return { letter: 'C+',  points: 2.3, key: 'Cplus'  };
+    if (mark >= 73) return { letter: 'C',   points: 2.0, key: 'C'      };
+    if (mark >= 70) return { letter: 'C−',  points: 1.7, key: 'Cminus' };
+    if (mark >= 67) return { letter: 'D+',  points: 1.3, key: 'Dplus'  };
+    if (mark >= 60) return { letter: 'D',   points: 1.0, key: 'D'      };
+    return               { letter: 'F',   points: 0.0, key: 'F'      };
+  }
+
+  function gpaLabel(gpa) {
+    if (gpa >= 3.7) return "Excellent — Dean's List!";
+    if (gpa >= 3.3) return 'Very Good';
+    if (gpa >= 3.0) return 'Good Standing';
+    if (gpa >= 2.7) return 'Satisfactory';
+    if (gpa >= 2.0) return 'Passing';
+    if (gpa >= 1.0) return 'Below Average';
+    return 'Failing';
+  }
+
+  function changeCount(delta) {
+    subjectCount = Math.max(MIN, Math.min(MAX, subjectCount + delta));
+    document.getElementById('count-display').textContent = subjectCount;
+    document.getElementById('btn-minus').disabled = subjectCount === MIN;
+    document.getElementById('btn-plus').disabled  = subjectCount === MAX;
+    renderSubjects();
+    hideResult();
+  }
+
+  function renderSubjects() {
+    const section = document.getElementById('subjects-section');
+    const list    = document.getElementById('subjects-list');
+    section.style.display = 'block';
+
+    const existing = Array.from(list.querySelectorAll('.subject-row')).map(row => ({
+      name: row.querySelector('.sub-name').value,
+      mark: row.querySelector('.sub-mark').value,
+    }));
+
+    list.innerHTML = '';
+
+    for (let i = 0; i < subjectCount; i++) {
+      const row = document.createElement('div');
+      row.className = 'subject-row';
+      row.style.animationDelay = `${i * 30}ms`;
+      row.dataset.index = i;
+      row.innerHTML = `
+        <input class="sub-name" type="text" placeholder="e.g. Mathematics"
+               value="${existing[i]?.name || ''}"
+               oninput="validateName(this)"/>
+        <input class="sub-mark" type="number" min="0" max="100" placeholder="0 – 100"
+               value="${existing[i]?.mark || ''}"
+               oninput="liveGrade(this, ${i})"/>
+        <div class="grade-badge" id="badge-${i}">—</div>
+      `;
+      list.appendChild(row);
+
+      // Restore badge if value existed
+      if (existing[i]?.mark !== '') {
+        const markEl = row.querySelector('.sub-mark');
+        liveGrade(markEl, i);
+      }
+    }
+  }
+
+  function validateName(input) {
+    input.classList.toggle('valid', input.value.trim().length > 0);
+    input.classList.remove('error');
+  }
+
+  function liveGrade(input, idx) {
+    const badge = document.getElementById(`badge-${idx}`);
+    if (!badge) return;
+
+    const val = parseFloat(input.value);
+    if (input.value === '' || isNaN(val)) {
+      badge.textContent = '—';
+      badge.className = 'grade-badge';
+      input.classList.remove('error', 'valid');
+      return;
+    }
+    if (val < 0 || val > 100) {
+      badge.textContent = '!';
+      badge.className = 'grade-badge';
+      input.classList.add('error');
+      input.classList.remove('valid');
+      return;
+    }
+    input.classList.remove('error');
+    input.classList.add('valid');
+    const g = gradeInfo(val);
+    badge.textContent = g.letter;
+    badge.className   = `grade-badge badge-${g.key}`;
+  }
+
+  function calculate() {
+    const rows = document.querySelectorAll('.subject-row');
+    let allValid = true;
+    const subjects = [];
+
+    rows.forEach((row, i) => {
+      const nameEl = row.querySelector('.sub-name');
+      const markEl = row.querySelector('.sub-mark');
+      const name   = nameEl.value.trim();
+      const mark   = parseFloat(markEl.value);
+
+      if (!name) {
+        nameEl.classList.add('error');
+        nameEl.classList.remove('valid');
+        allValid = false;
+      }
+      if (isNaN(mark) || mark < 0 || mark > 100) {
+        markEl.classList.add('error');
+        markEl.classList.remove('valid');
+        allValid = false;
+      }
+
+      if (name && !isNaN(mark) && mark >= 0 && mark <= 100) {
+        subjects.push({ name, mark });
+      }
+    });
+
+    if (!allValid || subjects.length !== subjectCount) return;
+
+    const totalPoints = subjects.reduce((sum, s) => sum + gradeInfo(s.mark).points, 0);
+    const gpa = totalPoints / subjects.length;
+    showResult(gpa, subjects);
+  }
+
+  function showResult(gpa, subjects) {
+    const section = document.getElementById('result-section');
+    section.style.display = 'block';
+
+    animateNumber(document.getElementById('gpa-value'), 0, gpa, 900);
+    document.getElementById('gpa-letter').textContent = gpaLabel(gpa);
+
+    const circumference = 364.4;
+    document.getElementById('ring-fill').style.strokeDashoffset =
+      circumference * (1 - gpa / 4.0);
+
+    document.getElementById('breakdown-grid').innerHTML = subjects.map(s => {
+      const g = gradeInfo(s.mark);
+      return `
+        <div class="breakdown-item">
+          <div>
+            <div class="breakdown-name" title="${s.name}">${s.name}</div>
+            <div class="breakdown-grade">${g.letter} &middot; ${g.points.toFixed(1)} pts</div>
+          </div>
+          <div class="breakdown-score">${s.mark}</div>
+        </div>`;
+    }).join('');
+
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function animateNumber(el, from, to, duration) {
+    const start = performance.now();
+    (function step(now) {
+      const t    = Math.min((now - start) / duration, 1);
+      const ease = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+      el.textContent = (from + (to - from) * ease).toFixed(2);
+      if (t < 1) requestAnimationFrame(step);
+    })(start);
+  }
+
+  function hideResult() {
+    document.getElementById('result-section').style.display = 'none';
+  }
+
+  function reset() {
+    subjectCount = 1;
+    document.getElementById('count-display').textContent = 1;
+    document.getElementById('btn-minus').disabled = true;
+    document.getElementById('btn-plus').disabled  = false;
+    renderSubjects();
+    hideResult();
+    window.scrollTo({ behavior: 'smooth', top: 0 });
+  }
+
+  // ── Theme toggle ──
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.dataset.theme === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    html.dataset.theme = next;
+    document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('gpa-theme', next);
+  }
+
+  // Boot
+  (function initTheme() {
+    const saved = localStorage.getItem('gpa-theme') || 'light';
+    document.documentElement.dataset.theme = saved;
+    document.getElementById('theme-icon').textContent = saved === 'dark' ? '☀️' : '🌙';
+  })();
+
+  document.getElementById('btn-minus').disabled = true;
+  renderSubjects();
+</script>
+</body>
+</html>
